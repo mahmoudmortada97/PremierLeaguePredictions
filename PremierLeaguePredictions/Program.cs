@@ -34,6 +34,7 @@ namespace PremierLeaguePredictions
             // In Startup.cs or Program.cs
             builder.Services.AddTransient<ScoringService>(provider =>
                 new ScoringService("https://api.example.com/realOrder", $"https://api.jotform.com/form/{formId}/submissions?apiKey={apiKey}"));
+            builder.Services.AddScoped<EmailService>();
 
             var app = builder.Build();
 

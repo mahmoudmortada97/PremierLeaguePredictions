@@ -6,7 +6,7 @@ namespace PremierLeaguePredictions.Controllers
     /// <summary>
     /// Handles API requests for Premier League predictions and scoring.
     /// </summary>
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class PredictionsController : ControllerBase
     {
@@ -30,7 +30,7 @@ namespace PremierLeaguePredictions.Controllers
         /// Gets all user predictions from JotForm.
         /// </summary>
         /// <returns>A list of user predictions.</returns>
-        [HttpGet]
+        [HttpGet("GetPredictions")]
         public async Task<IActionResult> GetPredictions()
         {
             var responses = await _jotFormService.FetchUserRankingsAsync();
@@ -112,7 +112,7 @@ namespace PremierLeaguePredictions.Controllers
         /// <response code="200">Returns the scoring results for each user.</response>
         /// <response code="400">Validation errors if the provided real order is invalid.</response>
         /// <response code="500">Internal server error if an unexpected issue occurs.</response>
-        [HttpPost]
+        [HttpPost("CalculateScores")]
         public async Task<IActionResult> CalculateScores([FromBody] Dictionary<string, int> realOrder)
         {
             if (realOrder == null || realOrder.Count == 0)
