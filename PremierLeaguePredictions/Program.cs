@@ -1,7 +1,11 @@
 
+using Hangfire;
+using Hangfire.MemoryStorage;
 using Microsoft.OpenApi.Models;
 using PremierLeaguePredictions.Services;
 using System.Reflection;
+
+
 
 namespace PremierLeaguePredictions
 {
@@ -27,6 +31,8 @@ namespace PremierLeaguePredictions
                 option.IncludeXmlComments(xmlPath);
             });
 
+            builder.Services.AddHangfire(c => c.UseMemoryStorage()); JobStorage.Current = new MemoryStorage();
+            builder.Services.AddHangfireServer();
 
             var apiKey = builder.Configuration["JotForm:ApiKey"];
             var formId = builder.Configuration["JotForm:FormId"];
@@ -37,6 +43,7 @@ namespace PremierLeaguePredictions
             builder.Services.AddScoped<EmailService>();
 
             var app = builder.Build();
+            app.UseHangfireDashboard();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -45,6 +52,7 @@ namespace PremierLeaguePredictions
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
 
             app.UseHttpsRedirection();
 

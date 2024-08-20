@@ -26,19 +26,16 @@ namespace PremierLeaguePredictions.Controllers
 
             try
             {
-                // Ensure the leaderboard HTML is built before sending emails
-                // You should have some logic to fetch the leaderboard data
-                var leaderboard = emails.UserScores; // Implement this method to get actual leaderboard data
+                var leaderboard = emails.PersonEmails;
                 _emailService.BuildLeaderboard(leaderboard);
+                _emailService.BuildFinalOrder(emails.FinalOrder);
 
-                // Send emails
-                var result = await Task.Run(() => _emailService.SendEmails(emails));
+                await _emailService.SendEmails(emails);
 
-                return Ok(result);
+                return Ok();
             }
             catch (Exception ex)
             {
-                // Log the exception if needed
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
