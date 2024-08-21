@@ -1,7 +1,5 @@
 ﻿using Hangfire;
-using Microsoft.AspNetCore.Identity;
 using PremierLeaguePredictions.Models;
-using System.Drawing;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
@@ -26,7 +24,7 @@ namespace PremierLeaguePredictions.Services
             //Todo  : Fix The Table View in Email
             var leaderboardHtml = new StringBuilder();
             int rank = 1;
-            foreach (var userScore in leaderboard.OrderByDescending(u => u.UserScore))
+            foreach (var user in leaderboard.OrderByDescending(u => u.UserScore))
             {
                 string medalClass = rank == 1 ? "gold" :
                     rank == 2 ? "silver" :
@@ -34,8 +32,10 @@ namespace PremierLeaguePredictions.Services
 
                 string color = $"style='background-color:{medalClass};text-align: center;font-size: large;'";
                 string textStyle = "style='font-weight: bold; font-size: larger;'";
+                string rowId = $"'{user.UserEmail}'";
 
-                leaderboardHtml.AppendLine($"<tr><td {color}>{rank}</td><td {textStyle}>{userScore.UserName}</td><td {textStyle}>{userScore.UserScore}</td></tr>");
+
+                leaderboardHtml.AppendLine($"<tr id={rowId}><td {color}>{rank}</td><td {textStyle}>{user.UserName}</td><td {textStyle}>{user.UserScore}</td></tr>");
 
                 rank++;
             }
@@ -69,6 +69,7 @@ namespace PremierLeaguePredictions.Services
                 try
                 {
                     string emailBody = BuildEmail(emailDto.UserName, emailDto.UserScore, emailDto.UserPredictedOrder);
+                    //await HighlightUserRow($"{emailDto.UserEmail}", _leaderboardHtml);
 
                     // Send email
                     BackgroundJob.Enqueue(() => Send(emailDto.UserEmail, emailBody));
@@ -170,7 +171,40 @@ namespace PremierLeaguePredictions.Services
             }
             return RankingHtml.ToString();
         }
+        /// TODO : Next Update
+        //private async Task HighlightUserRow(string userId, string leaderboard)
+        //{
+        //    // Initialize the StringBuilder with the current HTML
+        //    var updatedHtml = new System.Text.StringBuilder(leaderboard);
 
+        //    // Define the styles
+        //    var existingStyle = "style='background-color: gray;'";
+        //    var newStyle = "style='background-color: gray;'";
+
+        //    // Remove existing gray background styles
+        //    updatedHtml.Replace(existingStyle, string.Empty);
+
+        //    // Define the row start tag and the new style to add
+        //    string rowStartTag = $"<tr id='{userId}'";
+        //    string styleToAdd = " " + newStyle;
+
+        //    // Find the row containing the userId
+        //    int rowStartIndex = updatedHtml.ToString().IndexOf(rowStartTag);
+
+        //    if (rowStartIndex != -1)
+        //    {
+        //        // Find the closing of the opening <tr> tag
+        //        int tagEndIndex = updatedHtml.ToString().IndexOf(">", rowStartIndex);
+
+        //        // Insert the new style attribute before the closing of the opening <tr> tag
+        //        updatedHtml.Insert(tagEndIndex, styleToAdd);
+        //    }
+
+        //    // Update the _leaderboardHtml with the modified HTML
+        //    _leaderboardHtml = updatedHtml.ToString();
+
+        //    await Task.CompletedTask;
+        //}
 
 
     }

@@ -110,58 +110,60 @@
         <!-- Main Content -->
         <div class="email-content">
             <center>
-                <h2>🏆 Premier League Predictions 2025 🏆</h2>
+                <h2 style="font-size:xx-large">🏆 Premier League Predictions 2025 🏆</h2>
             </center>
-            <h4>Dear *|UserName|*,</h4>
-            <p>Thank you for participating in the Premier League Predictions 2025!</p>
-            <h4>Your final score is: *|Score|* Points</h4>
+            <div style="font-size:medium">
+                <h4>Dear *|UserName|*,</h4>
+                <p>Thank you for participating in the Premier League Predictions 2025!</p>
+                <h4>Your final score is: *|Score|* Points</h4>
+            </div>
         </div>
 
         <!-- Table Section -->
         <div class="email-content">
-            <h4>Here's the leaderboard</h4>
-            <table class="email-table">
+            <h4 style="font-size:large">Here's the <strong>Leaderboard</strong></h4>
+            <table class="email-table" >
                 <thead>
                     <tr>
                         <th>Rank</th>
-                        <th>Name</th>
-                        <th>Status</th>
+                        <th ؤ>Name</th>
+                        <th>Score</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody style="font-size:medium">
                     *|Leaderboard|*
                 </tbody>
             </table>
         </div>
 
         <!-- Comparison Tables Section -->
-        <div class="email-content">
-            <p>Here is how your predictions compared to the real rankings:</p>
-            <div class="table-container">
-                <div class="mb-3">
+        <div class="email-content ">
+            <p class=" text-center" style="font-size:large">Here is how your predictions compared to the real rankings:</p>
+            <div class="table-container ">
+                <div class="text-center mx-4" style="margin-right:auto">
                     <h3 class="text-center">Your Predictions</h3>
-                    <table class="table table-dark table-bordered">
+                    <table class=" text-center table table-dark table-bordered " style=" margin: 0 auto;width:auto">
                         <thead>
                             <tr>
                                 <th>Rank</th>
                                 <th>Team</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style="font-size: small; font-weight: 600; text-align: center ">
                             *|UserOrderRanking|*
                         </tbody>
                     </table>
                 </div>
-                <div class=" mb-3">
+                <div class="text-center">
                     <h3 class="text-center">Real Rankings</h3>
-                    <table class="table table-dark table-bordered">
+                    <table class="table text-center table-dark table-bordered" style=" margin: 0 auto;width:auto">
                         <thead>
                             <tr>
                                 <th>Rank</th>
                                 <th>Team</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style="font-size: small; font-weight:600;text-align:center">
                             *|FinalRanking|*
                         </tbody>
                     </table>
@@ -170,7 +172,7 @@
             </div>
         </div>
 
-        <div class="email-content">
+        <div class="email-content text-center">
             <p>Thanks again for playing, and I hope you enjoyed the competition! ⚽</p>
             <p class="footer">
                 For more fun, check my LinkedIn <a target="_blank" href="https://www.linkedin.com/in/mahmoudmortada97/">account</a>.
