@@ -1,5 +1,7 @@
 ﻿using Hangfire;
+using Microsoft.AspNetCore.Identity;
 using PremierLeaguePredictions.Models;
+using System.Drawing;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
@@ -27,17 +29,13 @@ namespace PremierLeaguePredictions.Services
             foreach (var userScore in leaderboard.OrderByDescending(u => u.UserScore))
             {
                 string medalClass = rank == 1 ? "gold" :
-                                    rank == 2 ? "silver" :
-                                    rank == 3 ? "bronze" : "";
+                    rank == 2 ? "silver" :
+                    rank == 3 ? "#cd7f32" : "transparent";  // Bronze color and default transparent
 
-                string medalIcon = rank <= 3 ? $"<i class=\"fas fa-medal {medalClass}\"></i>" : rank.ToString();
+                string color = $"style='background-color:{medalClass};text-align: center;font-size: large;'";
+                string textStyle = "style='font-weight: bold; font-size: larger;'";
 
-                leaderboardHtml.AppendLine($@"
-                                    <tr>
-                                        <td class=\`medal\`>{medalIcon}</td>
-                                        < td >{userScore.UserName}</ td >
-                                        < td >{userScore.UserScore}</ td >
-                                    </ tr > ");
+                leaderboardHtml.AppendLine($"<tr><td {color}>{rank}</td><td {textStyle}>{userScore.UserName}</td><td {textStyle}>{userScore.UserScore}</td></tr>");
 
                 rank++;
             }
@@ -168,12 +166,7 @@ namespace PremierLeaguePredictions.Services
             var RankingHtml = new StringBuilder();
             foreach (var rankingItem in Ranking.OrderBy(r => r.Value))
             {
-                var test = string.Format($@"
-                    <tr>
-                        <td>{rankingItem.Value}</td>
-                        <td>{rankingItem.Key}</td>
-                    </tr>");
-                RankingHtml.AppendLine(test);
+                RankingHtml.AppendLine($"<tr><td>{rankingItem.Value}</td><td>{rankingItem.Key}</td></tr>");
             }
             return RankingHtml.ToString();
         }
