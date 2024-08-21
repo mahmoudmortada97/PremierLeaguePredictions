@@ -59,7 +59,7 @@ namespace PremierLeaguePredictions.Services
             throw new Exception("Failed to fetch real rankings");
         }
 
-        public async Task<List<UserRanking>> FetchUserRankingsAsync()
+        public async Task<List<UserRankingDTO>> FetchUserRankingsAsync()
         {
             var client = new RestClient($"https://api.jotform.com/form/{_formId}/submissions?apiKey={_apiKey}");
             var request = new RestRequest();
@@ -68,7 +68,7 @@ namespace PremierLeaguePredictions.Services
             if (response.IsSuccessful)
             {
                 var json = JObject.Parse(response.Content);
-                var userRankings = new List<UserRanking>();
+                var userRankings = new List<UserRankingDTO>();
 
                 foreach (var submission in json["content"])
                 {
@@ -84,7 +84,7 @@ namespace PremierLeaguePredictions.Services
                         userName = $"{firstName} {lastName}".Trim();
                     }
 
-                    var userRanking = new UserRanking
+                    var userRanking = new UserRankingDTO
                     {
                         UserName = userName,
                         UserEmail = submission["answers"]["3"]["answer"]?.ToString(),

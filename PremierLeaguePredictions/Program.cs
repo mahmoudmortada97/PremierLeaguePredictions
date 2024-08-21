@@ -39,8 +39,9 @@ namespace PremierLeaguePredictions
             builder.Services.AddSingleton(new JotFormService(formId, apiKey));
             // In Startup.cs or Program.cs
             builder.Services.AddTransient<ScoringService>(provider =>
-                new ScoringService("https://api.example.com/realOrder", $"https://api.jotform.com/form/{formId}/submissions?apiKey={apiKey}"));
+                new ScoringService($"https://api.jotform.com/form/{formId}/submissions?apiKey={apiKey}"));
             builder.Services.AddScoped<EmailService>();
+            builder.Services.AddHttpClient(); // Register IHttpClientFactory
 
             var app = builder.Build();
             app.UseHangfireDashboard();

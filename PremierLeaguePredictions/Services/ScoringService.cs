@@ -33,7 +33,7 @@ namespace PremierLeaguePredictions.Services
                     ? realOrder
                     : await FetchRealOrderAsync();
 
-                var results = new List<ScoringResult>();
+                var results = new List<UserRankingDTO>();
                 var userScores = new List<Standings>();
 
                 // Calculate score for each user
@@ -41,13 +41,12 @@ namespace PremierLeaguePredictions.Services
                 {
                     var score = CalculateScore(actualRealOrder, userRanking.Rankings);
 
-                    results.Add(new ScoringResult
+                    results.Add(new UserRankingDTO
                     {
                         UserEmail = userRanking.UserEmail,
                         UserName = userRanking.UserName,
-                        Score = score,
-                        UserPredictedOrder = userRanking.Rankings
-                        // RealOrder is not included here
+                        UserScore = score,
+                        Rankings = userRanking.Rankings
                     });
 
                     userScores.Add(new Standings
@@ -132,7 +131,7 @@ namespace PremierLeaguePredictions.Services
         }
 
         // Fetch user rankings from an external source
-        private async Task<List<UserRanking>> FetchUserRankingsAsync()
+        private async Task<List<UserRankingDTO>> FetchUserRankingsAsync()
         {
             var client = new RestClient(_userRankingsUrl);
             var request = new RestRequest();
@@ -141,11 +140,11 @@ namespace PremierLeaguePredictions.Services
             if (response.IsSuccessful)
             {
                 var json = JObject.Parse(response.Content);
-                var userRankings = new List<UserRanking>();
+                var userRankings = new List<UserRankingDTO>();
 
                 foreach (var submission in json["content"])
                 {
-                    var userRanking = new UserRanking
+                    var userRanking = new UserRankingDTO
                     {
                         UserName = submission["answers"]["13"]["prettyFormat"]?.ToString(),
                         UserEmail = submission["answers"]["3"]["answer"]?.ToString(),

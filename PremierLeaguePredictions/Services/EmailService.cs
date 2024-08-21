@@ -19,7 +19,7 @@ namespace PremierLeaguePredictions.Services
             _configuration = configuration;
         }
 
-        public void BuildLeaderboard(List<PersonEmailDTO> leaderboard)
+        public async Task BuildLeaderboardAsync(List<UserRankingDTO> leaderboard)
         {
             //Todo  : Fix The Table View in Email
             var leaderboardHtml = new StringBuilder();
@@ -44,14 +44,14 @@ namespace PremierLeaguePredictions.Services
         }
 
 
-        public void BuildFinalOrder(Dictionary<string, int> finalRanking)
+        public async Task BuildFinalOrderAsync(Dictionary<string, int> finalRanking)
         {
 
             _finalRankingHtml = BuildRankingHtml(finalRanking);
         }
 
 
-        public async Task SendEmails(EmailDTO emails)
+        public async Task SendEmailsAsync(EmailDTO emails)
         {
             if (emails == null)
                 throw new ArgumentNullException(nameof(emails));
@@ -64,11 +64,11 @@ namespace PremierLeaguePredictions.Services
 
             var results = new StringBuilder();
 
-            foreach (var emailDto in emails.PersonEmails)
+            foreach (var emailDto in emails.UserRankings)
             {
                 try
                 {
-                    string emailBody = BuildEmail(emailDto.UserName, emailDto.UserScore, emailDto.UserPredictedOrder);
+                    string emailBody = BuildEmail(emailDto.UserName, emailDto.UserScore, emailDto.Rankings);
                     //await HighlightUserRow($"{emailDto.UserEmail}", _leaderboardHtml);
 
                     // Send email
@@ -171,7 +171,10 @@ namespace PremierLeaguePredictions.Services
             }
             return RankingHtml.ToString();
         }
-        /// TODO : Next Update
+
+
+
+        // TODO : Next Update
         //private async Task HighlightUserRow(string userId, string leaderboard)
         //{
         //    // Initialize the StringBuilder with the current HTML
