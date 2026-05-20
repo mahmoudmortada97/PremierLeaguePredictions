@@ -91,7 +91,7 @@ namespace PremierLeaguePredictions.Services
         private async Task<List<UserRankingDTO>> FetchUserRankingsAsync()
         {
             var response = await _httpClient.GetStringAsync(
-                $"form/{_formId}/submissions?apiKey={_apiKey}");
+    $"form/{_formId}/submissions?apiKey={_apiKey}&limit=1000");
 
             var json = JObject.Parse(response);
             var userRankings = new List<UserRankingDTO>();
