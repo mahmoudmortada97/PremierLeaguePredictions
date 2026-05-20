@@ -1,14 +1,11 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premier League Predictions 2025</title>
+    <title>Premier League Predictions 2026 - Final Results</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.3/css/all.min.css" integrity="sha384-oyVlcQm3CrMI8m4Ekt1G4Jln7Kxw8jkaBOlo77TvevOtcnOZrPhO3FGikbzEpOQU" crossorigin="anonymous">
-
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
     <style>
         body {
@@ -74,12 +71,16 @@
         .table-container {
             display: flex;
             justify-content: space-around;
-            align-items: center; /* Center vertically */
+            align-items: flex-start;
             margin-top: 20px;
         }
 
+            .table-container > div {
+                width: 48%;
+            }
+
             .table-container table {
-                width: 45%;
+                width: 100%;
                 border-collapse: collapse;
             }
 
@@ -93,41 +94,53 @@
                 background-color: #f4f4f4;
             }
 
-        .medal {
+        .headline-hook {
+            color: #37003c;
+            font-weight: 800;
             text-align: center;
+            margin: 15px 0 25px 0;
+            font-size: 1.4rem;
+            line-height: 1.4;
         }
     </style>
-
 </head>
-
 <body>
     <div class="email-container">
         <!-- Header with Logo -->
         <div class="email-header">
-            <img src="https://www.premierleague.com/resources/rebrand/v7.151.1/i/elements/pl-main-logo.png" alt="Company Logo">
+            <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" alt="Premier League Logo">
         </div>
 
         <!-- Main Content -->
         <div class="email-content">
             <center>
-                <h2 style="font-size:xx-large">🏆 Premier League Predictions 2025 🏆</h2>
+                <h2 style="font-size:xx-large; font-weight: bold; color: #37003c;">🏆 Premier League Predictions 2026 🏆</h2>
             </center>
+
+            <!-- The Gameweek 38 Hook Line -->
+            <div class="headline-hook">
+                🔥 Gameweek 38 is officially over!<br>
+                Are you ready for the results of the competition of the Premier league predictions 2026?
+            </div>
+
             <div style="font-size:medium">
-                <h4>Dear *|UserName|*,</h4>
-                <p>Thank you for participating in the Premier League Predictions 2025!</p>
-                <h4>Your final score is: *|Score|* Points</h4>
+                <h4>Dear <strong>*|UserName|*</strong>,</h4>
+                <p>Thank you for participating in the Premier League Predictions 2026! It has been an incredible season, and every single point mattered down to the final whistle.</p>
+                <h4 style="margin-top: 20px; background-color: #f4f4f4; padding: 10px; border-left: 5px solid #37003c;">
+                    Your Final Score is: <span style="color: #37003c; font-weight: bold;">*|Score|* Points</span>
+                </h4>
             </div>
         </div>
 
         <!-- Table Section -->
         <div class="email-content">
             <h4 style="font-size:large">Here's the <strong>Leaderboard</strong></h4>
-            <table class="email-table" >
+            <table class="email-table">
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th ؤ>Name</th>
-                        <th>Score</th>
+                        <th style="width: 15%; text-align: center;">Rank</th>
+                        <th>Name</th>
+                        <th style="width: 25%;">Score</th>
                     </tr>
                 </thead>
                 <tbody style="font-size:medium">
@@ -137,55 +150,54 @@
         </div>
 
         <!-- Comparison Tables Section -->
-        <div class="email-content ">
-            <p class=" text-center" style="font-size:large">Here is how your predictions compared to the real rankings:</p>
-            <div class="table-container ">
-                <div class="text-center mx-4" style="margin-right:auto">
-                    <h3 class="text-center">Your Predictions</h3>
-                    <table class=" text-center table table-dark table-bordered " style=" margin: 0 auto;width:auto">
+        <div class="email-content">
+            <p class="text-center" style="font-size:large; font-weight: bold;">Here is how your predictions compared to the real rankings:</p>
+            <div class="table-container">
+                <div class="text-center">
+                    <h5 style="font-weight: bold; color: #37003c; margin-bottom: 10px;">Your Predictions</h5>
+                    <table class="table text-center table-dark table-bordered">
                         <thead>
                             <tr>
-                                <th>Rank</th>
-                                <th>Team</th>
+                                <th style="background-color: #37003c; color: white;">Rank</th>
+                                <th style="background-color: #37003c; color: white;">Team</th>
                             </tr>
                         </thead>
-                        <tbody style="font-size: small; font-weight: 600; text-align: center ">
+                        <tbody style="font-size: small; font-weight: 600;">
                             *|UserOrderRanking|*
                         </tbody>
                     </table>
                 </div>
                 <div class="text-center">
-                    <h3 class="text-center">Real Rankings</h3>
-                    <table class="table text-center table-dark table-bordered" style=" margin: 0 auto;width:auto">
+                    <h5 style="font-weight: bold; color: #37003c; margin-bottom: 10px;">Real Rankings</h5>
+                    <table class="table text-center table-dark table-bordered">
                         <thead>
                             <tr>
-                                <th>Rank</th>
-                                <th>Team</th>
+                                <th style="background-color: #37003c; color: white;">Rank</th>
+                                <th style="background-color: #37003c; color: white;">Team</th>
                             </tr>
                         </thead>
-                        <tbody style="font-size: small; font-weight:600;text-align:center">
+                        <tbody style="font-size: small; font-weight: 600;">
                             *|FinalRanking|*
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
 
-        <div class="email-content text-center">
+        <!-- Outro Section -->
+        <div class="email-content text-center" style="margin-top: 20px; padding-bottom: 20px;">
             <p>Thanks again for playing, and I hope you enjoyed the competition! ⚽</p>
-            <p class="footer">
-                For more fun, check my LinkedIn <a target="_blank" href="https://www.linkedin.com/in/mahmoudmortada97/">account</a>.
+            <p style="font-size: 0.95rem; margin-top: 15px;">
+                For more fun, check my LinkedIn <a target="_blank" href="https://www.linkedin.com/in/mahmoudmortada97/" style="color: #37003c; font-weight: bold; text-decoration: underline;">account</a>.
             </p>
         </div>
 
         <!-- Footer -->
         <div class="email-footer">
-            <p>&copy; 2024 Mahmoud Mortada. All rights reserved.</p>
+            <p>&copy; 2026 Mahmoud Mortada. All rights reserved.</p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
-
 </html>

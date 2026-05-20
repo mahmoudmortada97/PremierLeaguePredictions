@@ -8,114 +8,78 @@ namespace PremierLeaguePredictions.Services
 {
     public class EmailService
     {
-        protected readonly IConfiguration _configuration;
-        private bool disposedValue;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<EmailService> _logger;
+        private readonly ScoringService _scoringService;
+        private readonly HashSet<string> _processedEmails = new(StringComparer.OrdinalIgnoreCase);
 
-        private string _leaderboardHtml;
-        private string _finalRankingHtml;
-
-        public EmailService(IConfiguration configuration)
+        public EmailService(
+            IConfiguration configuration,
+            ILogger<EmailService> logger,
+            ScoringService scoringService)
         {
             _configuration = configuration;
+            _logger = logger;
+            _scoringService = scoringService;
         }
-
-        public async Task BuildLeaderboardAsync(List<UserRankingDTO> leaderboard)
-        {
-            //Todo  : Fix The Table View in Email
-            var leaderboardHtml = new StringBuilder();
-            int rank = 1;
-            foreach (var user in leaderboard.OrderByDescending(u => u.UserScore))
-            {
-                string medalClass = rank == 1 ? "gold" :
-                    rank == 2 ? "silver" :
-                    rank == 3 ? "#cd7f32" : "transparent";  // Bronze color and default transparent
-
-                string color = $"style='background-color:{medalClass};text-align: center;font-size: large;'";
-                string textStyle = "style='font-weight: bold; font-size: larger;'";
-                string rowId = $"'{user.UserEmail}'";
-
-
-                leaderboardHtml.AppendLine($"<tr id={rowId}><td {color}>{rank}</td><td {textStyle}>{user.UserName}</td><td {textStyle}>{user.UserScore}</td></tr>");
-
-                rank++;
-            }
-
-            _leaderboardHtml = leaderboardHtml.ToString();
-        }
-
-
-        public async Task BuildFinalOrderAsync(Dictionary<string, int> finalRanking)
-        {
-
-            _finalRankingHtml = BuildRankingHtml(finalRanking);
-        }
-
 
         public async Task SendEmailsAsync(EmailDTO emails)
         {
-            if (emails == null)
-                throw new ArgumentNullException(nameof(emails));
+            if (emails == null) throw new ArgumentNullException(nameof(emails));
 
-            if (string.IsNullOrEmpty(_leaderboardHtml))
-                throw new InvalidOperationException("Leaderboard HTML is not built. Call BuildLeaderboard first.");
-
-            if (string.IsNullOrEmpty(_finalRankingHtml))
-                throw new InvalidOperationException("Final Ranking HTML is not built. Call Final Ranking first.");
-
-            var results = new StringBuilder();
+            string leaderboardHtml = BuildLeaderboardHtml(emails.UserRankings);
+            string finalRankingHtml = BuildRankingHtml(emails.FinalOrder);
 
             foreach (var emailDto in emails.UserRankings)
             {
+                if (!_processedEmails.Add(emailDto.UserEmail))
+                {
+                    _logger.LogWarning("Skipping duplicate send for {Email}", emailDto.UserEmail);
+                    continue;
+                }
+
                 try
                 {
-                    string emailBody = BuildEmail(emailDto.UserName, emailDto.UserScore, emailDto.Rankings);
-                    //await HighlightUserRow($"{emailDto.UserEmail}", _leaderboardHtml);
+                    string body = BuildEmail(
+                        emailDto.UserName,
+                        emailDto.UserScore,
+                        emailDto.Rankings,
+                        leaderboardHtml,
+                        finalRankingHtml);
 
-                    // Send email
-                    BackgroundJob.Enqueue(() => Send(emailDto.UserEmail, emailBody));
-
+                    BackgroundJob.Enqueue<EmailService>(svc => svc.Send(emailDto.UserEmail, body));
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Failed to enqueue email for {Email}", emailDto.UserEmail);
                 }
             }
-            await Task.CompletedTask;
 
+            await Task.CompletedTask;
         }
 
-        private string BuildEmail(string userName, int score, Dictionary<string, int> userPredictionRanking)
+        private string BuildEmail(
+            string userName,
+            int score,
+            Dictionary<string, int> userPredictionRanking,
+            string leaderboardHtml,
+            string finalRankingHtml)
         {
-            string html = string.Empty;
+            string? templatePath = _configuration.GetValue<string>("Email:EmailTemplate");
 
-            try
-            {
-                string? templateFilePath = _configuration.GetValue<string>("Email:EmailTemplate");
+            if (string.IsNullOrEmpty(templatePath))
+                throw new InvalidOperationException("Email template path is not configured.");
 
-                if (templateFilePath is not null)
-                {
-                    using (StreamReader reader = File.OpenText(templateFilePath))
-                    {
-                        html = reader.ReadToEnd();
-                    }
-                }
+            string html = File.ReadAllText(templatePath);
 
-                var userPredictionRankingHtml = BuildRankingHtml(userPredictionRanking);
+            string userRankingHtml = BuildRankingHtml(userPredictionRanking);
 
-                // Replace username and score placeholders
-                html = html.Replace("*|UserName|*", userName);
-                html = html.Replace("*|Score|*", score.ToString());
-
-                // Replace the leaderboard placeholder with pre-built HTML
-                html = html.Replace("*|Leaderboard|*", _leaderboardHtml);
-                html = html.Replace("*|FinalRanking|*", _finalRankingHtml);
-                html = html.Replace("*|UserOrderRanking|*", userPredictionRankingHtml);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(ex.Message);
-            }
-
-            return html;
+            return html
+                .Replace("*|UserName|*", userName)
+                .Replace("*|Score|*", score.ToString())
+                .Replace("*|Leaderboard|*", leaderboardHtml)
+                .Replace("*|FinalRanking|*", finalRankingHtml)
+                .Replace("*|UserOrderRanking|*", userRankingHtml);
         }
 
         public async Task Send(string to, string body)
@@ -125,90 +89,76 @@ namespace PremierLeaguePredictions.Services
                 string fromAddress = _configuration.GetValue<string>("Email:From") ?? string.Empty;
                 string fromDisplayName = _configuration.GetValue<string>("Email:DisplayName") ?? string.Empty;
 
-                MailAddress addressFrom = new MailAddress(fromAddress, fromDisplayName);
-                MailAddress addressTo = new MailAddress(to);
+                var addressFrom = new MailAddress(fromAddress, fromDisplayName);
+                var addressTo = new MailAddress(to);
 
-                using (MailMessage message = new MailMessage())
-                {
-                    message.BodyEncoding = Encoding.UTF8;
-                    message.From = addressFrom;
-                    message.To.Add(addressTo);
-                    message.Subject = "Premier League Predictions 2025";
-                    message.IsBodyHtml = true;
-                    message.Body = body;
+                using var message = new MailMessage();
+                message.BodyEncoding = Encoding.UTF8;
+                message.From = addressFrom;
+                message.To.Add(addressTo);
+                message.Subject = "Premier League Predictions 2026";
+                message.IsBodyHtml = true;
+                message.Body = body;
 
-                    using (SmtpClient smtp = new SmtpClient())
-                    {
-                        smtp.Port = Convert.ToInt32(_configuration.GetValue<string>("Email:Port"));
-                        smtp.Host = _configuration.GetValue<string>("Email:Server") ?? string.Empty;
-                        smtp.EnableSsl = true;
-                        smtp.UseDefaultCredentials = false;
-                        smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                        smtp.Credentials = new NetworkCredential(fromAddress, _configuration.GetValue<string>("Email:Password"));
+                using var smtp = new SmtpClient();
+                smtp.Port = _configuration.GetValue<int>("Email:Port");
+                smtp.Host = _configuration.GetValue<string>("Email:Server") ?? string.Empty;
+                smtp.EnableSsl = true;
+                smtp.UseDefaultCredentials = false;
+                smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                smtp.Credentials = new NetworkCredential(
+                    fromAddress,
+                    _configuration.GetValue<string>("Email:Password"));
 
-                        await smtp.SendMailAsync(message);
-                    }
-                }
+                await smtp.SendMailAsync(message);
             }
             catch (SmtpFailedRecipientException ex)
             {
-                Console.WriteLine($"Failed to deliver email to . Exception: {ex.Message}");
+                _logger.LogError(ex, "Failed to deliver email to {Recipient}", to);
             }
             catch (Exception ex)
             {
-
+                _logger.LogError(ex, "An error occurred while sending email to {Recipient}", to);
+                throw;
             }
         }
 
-
-
-        private string BuildRankingHtml(Dictionary<string, int> Ranking)
+        private string BuildLeaderboardHtml(List<UserRankingDTO> leaderboard)
         {
-            var RankingHtml = new StringBuilder();
-            foreach (var rankingItem in Ranking.OrderBy(r => r.Value))
+            var sb = new StringBuilder();
+            int rank = 1;
+
+            foreach (var user in leaderboard.OrderByDescending(u => u.UserScore))
             {
-                RankingHtml.AppendLine($"<tr><td>{rankingItem.Value}</td><td>{rankingItem.Key}</td></tr>");
+                string bgColor = rank switch
+                {
+                    1 => "gold",
+                    2 => "silver",
+                    3 => "#cd7f32",
+                    _ => "transparent"
+                };
+
+                sb.AppendLine(
+                    $"<tr id='{user.UserEmail}'>" +
+                    $"<td style='background-color:{bgColor};text-align:center;font-size:large'>{rank}</td>" +
+                    $"<td style='font-weight:bold;font-size:larger'>{user.UserName}</td>" +
+                    $"<td style='font-weight:bold;font-size:larger'>{user.UserScore}</td>" +
+                    $"</tr>");
+
+                rank++;
             }
-            return RankingHtml.ToString();
+
+            return sb.ToString();
         }
 
+        private string BuildRankingHtml(Dictionary<string, int> ranking)
+        {
+            var sb = new StringBuilder();
 
+            foreach (var item in ranking.OrderBy(r => r.Value))
+                sb.AppendLine($"<tr><td>{item.Value}</td><td>{item.Key}</td></tr>");
 
-        // TODO : Next Update
-        //private async Task HighlightUserRow(string userId, string leaderboard)
-        //{
-        //    // Initialize the StringBuilder with the current HTML
-        //    var updatedHtml = new System.Text.StringBuilder(leaderboard);
-
-        //    // Define the styles
-        //    var existingStyle = "style='background-color: gray;'";
-        //    var newStyle = "style='background-color: gray;'";
-
-        //    // Remove existing gray background styles
-        //    updatedHtml.Replace(existingStyle, string.Empty);
-
-        //    // Define the row start tag and the new style to add
-        //    string rowStartTag = $"<tr id='{userId}'";
-        //    string styleToAdd = " " + newStyle;
-
-        //    // Find the row containing the userId
-        //    int rowStartIndex = updatedHtml.ToString().IndexOf(rowStartTag);
-
-        //    if (rowStartIndex != -1)
-        //    {
-        //        // Find the closing of the opening <tr> tag
-        //        int tagEndIndex = updatedHtml.ToString().IndexOf(">", rowStartIndex);
-
-        //        // Insert the new style attribute before the closing of the opening <tr> tag
-        //        updatedHtml.Insert(tagEndIndex, styleToAdd);
-        //    }
-
-        //    // Update the _leaderboardHtml with the modified HTML
-        //    _leaderboardHtml = updatedHtml.ToString();
-
-        //    await Task.CompletedTask;
-        //}
-
-
+            return sb.ToString();
+        }
     }
 }

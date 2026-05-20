@@ -1,120 +1,110 @@
 ﻿using Newtonsoft.Json.Linq;
 using PremierLeaguePredictions.Models;
-using RestSharp;
 
 namespace PremierLeaguePredictions.Services
 {
     public class JotFormService
     {
+        private readonly HttpClient _httpClient;
         private readonly string _formId;
         private readonly string _apiKey;
 
-        public JotFormService(string formId, string apiKey)
+        public JotFormService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
-            _formId = formId;
-            _apiKey = apiKey;
+            _httpClient = httpClientFactory.CreateClient("JotForm");
+            _formId = configuration["JotForm:FormId"]
+                ?? throw new InvalidOperationException("JotForm:FormId is not configured.");
+            _apiKey = configuration["JotForm:ApiKey"]
+                ?? throw new InvalidOperationException("JotForm:ApiKey is not configured.");
         }
 
         public async Task<Dictionary<string, int>> FetchRealRankingsAsync()
         {
-            var url = $"https://api.jotform.com/form/{_formId}/submissions?apiKey={_apiKey}";
-            var client = new RestClient(url);
+            var response = await _httpClient.GetStringAsync(BuildSubmissionsUrl());
+            var json = JObject.Parse(response);
+            var rankings = new Dictionary<string, int>();
 
-            var request = new RestRequest
+            foreach (var submission in json["content"]!)
             {
-                Method = Method.Get
-            };
+                var teamRankingAnswer = submission["answers"]?["12"]?["answer"]?.ToString();
 
-            var response = await client.ExecuteAsync(request);
+                if (string.IsNullOrEmpty(teamRankingAnswer)) continue;
 
-            if (response.IsSuccessful)
-            {
-                var json = JObject.Parse(response.Content);
-                var rankings = new Dictionary<string, int>();
-
-                foreach (var submission in json["content"])
+                foreach (var ranking in teamRankingAnswer.Split('\n'))
                 {
-                    var answers = submission["answers"];
-                    var teamRankingAnswer = answers["12"]["answer"]?.ToString();
-
-                    if (!string.IsNullOrEmpty(teamRankingAnswer))
+                    var parts = ranking.Split(':');
+                    if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int rank))
                     {
-                        var rankingsList = teamRankingAnswer.Split('\n');
-                        foreach (var ranking in rankingsList)
-                        {
-                            var parts = ranking.Split(':');
-                            if (parts.Length == 2)
-                            {
-                                var teamName = parts[1].Trim();
-                                var rank = int.Parse(parts[0].Trim());
-                                rankings[teamName] = rank;
-                            }
-                        }
+                        var teamName = DecodeTeamName(parts[1]);
+                        rankings[teamName] = rank;
                     }
                 }
-
-                return rankings;
             }
 
-            throw new Exception("Failed to fetch real rankings");
+            return rankings;
         }
 
         public async Task<List<UserRankingDTO>> FetchUserRankingsAsync()
         {
-            var client = new RestClient($"https://api.jotform.com/form/{_formId}/submissions?apiKey={_apiKey}");
-            var request = new RestRequest();
-            var response = await client.ExecuteAsync(request);
+            var response = await _httpClient.GetStringAsync(BuildSubmissionsUrl());
+            var json = JObject.Parse(response);
+            var userRankings = new List<UserRankingDTO>();
 
-            if (response.IsSuccessful)
+            foreach (var submission in json["content"]!)
             {
-                var json = JObject.Parse(response.Content);
-                var userRankings = new List<UserRankingDTO>();
+                string userName = ParseUserName(submission);
 
-                foreach (var submission in json["content"])
+                var userRanking = new UserRankingDTO
                 {
-                    var userNameJson = submission["answers"]["13"]["answer"]?.ToString();
-                    string userName = string.Empty;
+                    UserName = userName,
+                    UserEmail = submission["answers"]?["3"]?["answer"]?.ToString(),
+                    Rankings = new Dictionary<string, int>()
+                };
 
-                    if (!string.IsNullOrEmpty(userNameJson))
+                var teamRankingAnswer = submission["answers"]?["12"]?["answer"]?.ToString();
+
+                if (!string.IsNullOrEmpty(teamRankingAnswer))
+                {
+                    foreach (var ranking in teamRankingAnswer.Split('\n'))
                     {
-                        // Parse the JSON string to extract the first and last names
-                        var userNameObject = JObject.Parse(userNameJson);
-                        var firstName = userNameObject["first"]?.ToString();
-                        var lastName = userNameObject["last"]?.ToString();
-                        userName = $"{firstName} {lastName}".Trim();
-                    }
-
-                    var userRanking = new UserRankingDTO
-                    {
-                        UserName = userName,
-                        UserEmail = submission["answers"]["3"]["answer"]?.ToString(),
-                        Rankings = new Dictionary<string, int>()
-                    };
-
-                    var teamRankingAnswer = submission["answers"]["12"]["answer"]?.ToString();
-
-                    if (!string.IsNullOrEmpty(teamRankingAnswer))
-                    {
-                        var rankingsList = teamRankingAnswer.Split('\n');
-                        foreach (var ranking in rankingsList)
+                        var parts = ranking.Split(':');
+                        if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int rank))
                         {
-                            var parts = ranking.Split(':');
-                            if (parts.Length == 2)
-                            {
-                                var rank = int.Parse(parts[0].Trim());
-                                var teamName = parts[1].Trim();
-                                userRanking.Rankings[teamName] = rank;
-                            }
+                            var teamName = DecodeTeamName(parts[1]);
+                            userRanking.Rankings[teamName] = rank;
                         }
                     }
-
-                    userRankings.Add(userRanking);
                 }
 
-                return userRankings;
+                userRankings.Add(userRanking);
             }
 
-            throw new Exception("Failed to fetch user rankings");
+            return userRankings;
         }
+
+        private string BuildSubmissionsUrl() =>
+            $"form/{_formId}/submissions?apiKey={_apiKey}";
+
+        private static string ParseUserName(JToken submission)
+        {
+            var userNameJson = submission["answers"]?["13"]?["answer"]?.ToString();
+
+            if (string.IsNullOrEmpty(userNameJson)) return string.Empty;
+
+            try
+            {
+                var obj = JObject.Parse(userNameJson);
+                var first = obj["first"]?.ToString();
+                var last = obj["last"]?.ToString();
+                return $"{first} {last}".Trim();
+            }
+            catch
+            {
+                return userNameJson;
+            }
+        }
+
+        private static string DecodeTeamName(string raw) =>
+            raw.Trim().Replace("&amp;", "&");
     }
 }
