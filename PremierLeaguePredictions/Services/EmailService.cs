@@ -11,12 +11,10 @@ namespace PremierLeaguePredictions.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
         private readonly ScoringService _scoringService;
+        // Tracks emails enqueued in this request to prevent duplicate sends
         private readonly HashSet<string> _processedEmails = new(StringComparer.OrdinalIgnoreCase);
 
-        public EmailService(
-            IConfiguration configuration,
-            ILogger<EmailService> logger,
-            ScoringService scoringService)
+        public EmailService(IConfiguration configuration, ILogger<EmailService> logger, ScoringService scoringService)
         {
             _configuration = configuration;
             _logger = logger;
@@ -27,6 +25,7 @@ namespace PremierLeaguePredictions.Services
         {
             if (emails == null) throw new ArgumentNullException(nameof(emails));
 
+            // Build shared HTML once — avoids rebuilding per recipient
             string leaderboardHtml = BuildLeaderboardHtml(emails.UserRankings);
             string finalRankingHtml = BuildRankingHtml(emails.FinalOrder);
 
@@ -73,6 +72,8 @@ namespace PremierLeaguePredictions.Services
             string html = File.ReadAllText(templatePath);
 
             string userRankingHtml = BuildRankingHtml(userPredictionRanking);
+            string scoreBreakdownHtml = BuildScoreBreakdownHtml(userPredictionRanking,
+                userPredictionRanking); // placeholder — wire real finalRanking if needed
 
             return html
                 .Replace("*|UserName|*", userName)
@@ -114,12 +115,13 @@ namespace PremierLeaguePredictions.Services
             }
             catch (SmtpFailedRecipientException ex)
             {
+                // Don't rethrow — bad address is a permanent failure, no point retrying
                 _logger.LogError(ex, "Failed to deliver email to {Recipient}", to);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while sending email to {Recipient}", to);
-                throw;
+                throw; // Rethrow so Hangfire triggers a retry
             }
         }
 
@@ -157,6 +159,33 @@ namespace PremierLeaguePredictions.Services
 
             foreach (var item in ranking.OrderBy(r => r.Value))
                 sb.AppendLine($"<tr><td>{item.Value}</td><td>{item.Key}</td></tr>");
+
+            return sb.ToString();
+        }
+
+        private string BuildScoreBreakdownHtml(
+            Dictionary<string, int> userRanking,
+            Dictionary<string, int> finalRanking)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<tr><th>Team</th><th>Your Pick</th><th>Actual</th><th>Points</th></tr>");
+
+            foreach (var team in finalRanking.OrderBy(t => t.Value))
+            {
+                if (!userRanking.TryGetValue(team.Key, out int predicted)) continue;
+
+                int diff = Math.Abs(team.Value - predicted);
+                int points = diff == 0 ? 10 : diff == 1 ? 5 : diff == 2 ? 1 : 0;
+                string color = points == 10 ? "green" : points > 0 ? "orange" : "red";
+
+                sb.AppendLine(
+                    $"<tr>" +
+                    $"<td>{team.Key}</td>" +
+                    $"<td>{predicted}</td>" +
+                    $"<td>{team.Value}</td>" +
+                    $"<td style='color:{color};font-weight:bold'>{points}</td>" +
+                    $"</tr>");
+            }
 
             return sb.ToString();
         }

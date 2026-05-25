@@ -22,36 +22,46 @@ namespace PremierLeaguePredictions.Services
         {
             var userRankings = await FetchUserRankingsAsync();
 
-            var results = new List<UserRankingDTO>();
-            var standings = new List<Standings>();
-
-            foreach (var userRanking in userRankings)
-            {
-                int score = CalculateScore(realOrder, userRanking.Rankings);
-
-                results.Add(new UserRankingDTO
+            var scoredUsers = userRankings
+                .Select(userRanking =>
                 {
-                    UserEmail = userRanking.UserEmail,
-                    UserName = userRanking.UserName,
-                    UserScore = score,
-                    Rankings = userRanking.Rankings
-                });
+                    var breakdown = CalculateBreakdown(realOrder, userRanking.Rankings);
 
-                standings.Add(new Standings
-                {
-                    UserEmail = userRanking.UserEmail,
-                    UserName = userRanking.UserName,
-                    Score = score
-                });
-            }
+                    return new
+                    {
+                        UserEmail = userRanking.UserEmail,
+                        UserName = userRanking.UserName,
+                        Rankings = userRanking.Rankings,
+                        Score = breakdown.Score,
+                        ExactCount = breakdown.ExactCount,
+                        OffByOneCount = breakdown.OffByOneCount,
+                        OffByTwoCount = breakdown.OffByTwoCount,
+                        RandomTieBreaker = Random.Shared.Next()
+                    };
+                })
+                .OrderByDescending(x => x.Score)
+                .ThenByDescending(x => x.ExactCount)
+                .ThenByDescending(x => x.OffByOneCount)
+                .ThenByDescending(x => x.OffByTwoCount)
+                .ThenByDescending(x => x.RandomTieBreaker)
+                .ToList();
 
-            var rankedStandings = standings
-                .OrderByDescending(u => u.Score)
-                .Select((u, index) => new Standings
+            var results = scoredUsers
+                .Select(x => new UserRankingDTO
                 {
-                    UserEmail = u.UserEmail,
-                    UserName = u.UserName,
-                    Score = u.Score,
+                    UserEmail = x.UserEmail,
+                    UserName = x.UserName,
+                    UserScore = x.Score,
+                    Rankings = x.Rankings
+                })
+                .ToList();
+
+            var rankedStandings = scoredUsers
+                .Select((x, index) => new Standings
+                {
+                    UserEmail = x.UserEmail,
+                    UserName = x.UserName,
+                    Score = x.Score,
                     Position = index + 1
                 })
                 .ToList();
@@ -68,30 +78,55 @@ namespace PremierLeaguePredictions.Services
             Dictionary<string, int> realOrder,
             Dictionary<string, int> userPredictedOrder)
         {
+            return CalculateBreakdown(realOrder, userPredictedOrder).Score;
+        }
+
+        private static ScoreBreakdown CalculateBreakdown(
+            Dictionary<string, int> realOrder,
+            Dictionary<string, int> userPredictedOrder)
+        {
             int score = 0;
+            int exactCount = 0;
+            int offByOneCount = 0;
+            int offByTwoCount = 0;
 
             foreach (var team in realOrder.Keys)
             {
-                if (!userPredictedOrder.TryGetValue(team, out int predictedRank)) continue;
+                if (!userPredictedOrder.TryGetValue(team, out int predictedRank))
+                    continue;
 
                 int diff = Math.Abs(realOrder[team] - predictedRank);
 
-                score += diff switch
+                switch (diff)
                 {
-                    0 => 10,
-                    1 => 5,
-                    2 => 1,
-                    _ => 0
-                };
+                    case 0:
+                        score += 10;
+                        exactCount++;
+                        break;
+                    case 1:
+                        score += 5;
+                        offByOneCount++;
+                        break;
+                    case 2:
+                        score += 1;
+                        offByTwoCount++;
+                        break;
+                }
             }
 
-            return score;
+            return new ScoreBreakdown
+            {
+                Score = score,
+                ExactCount = exactCount,
+                OffByOneCount = offByOneCount,
+                OffByTwoCount = offByTwoCount
+            };
         }
 
         private async Task<List<UserRankingDTO>> FetchUserRankingsAsync()
         {
             var response = await _httpClient.GetStringAsync(
-    $"form/{_formId}/submissions?apiKey={_apiKey}&limit=1000");
+                $"form/{_formId}/submissions?apiKey={_apiKey}&limit=1000");
 
             var json = JObject.Parse(response);
             var userRankings = new List<UserRankingDTO>();
@@ -109,9 +144,9 @@ namespace PremierLeaguePredictions.Services
 
                 if (!string.IsNullOrEmpty(teamRankingAnswer))
                 {
-                    foreach (var ranking in teamRankingAnswer.Split('\n'))
+                    foreach (var ranking in teamRankingAnswer.Split('\n', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        var parts = ranking.Split(':');
+                        var parts = ranking.Split(':', 2);
                         if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int rank))
                         {
                             var teamName = parts[1].Trim().Replace("&amp;", "&");
@@ -124,6 +159,14 @@ namespace PremierLeaguePredictions.Services
             }
 
             return userRankings;
+        }
+
+        private sealed class ScoreBreakdown
+        {
+            public int Score { get; set; }
+            public int ExactCount { get; set; }
+            public int OffByOneCount { get; set; }
+            public int OffByTwoCount { get; set; }
         }
     }
 }
